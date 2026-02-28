@@ -44,13 +44,11 @@ pub fn app() -> axum::Router {
         )
 }
 
-////
 // Demo axum handlers
 //
 // These handlers are used to demonstrate axum capabilities.
 // Each handler is an async function that returns something that
 // axum can convert into a response.
-////
 
 /// axum handler for any request that fails to match the router routes.
 /// This implementation returns HTTP status code Not Found (404).
@@ -83,9 +81,7 @@ pub async fn status() -> (axum::http::StatusCode, String) {
     (axum::http::StatusCode::OK, "OK".to_string())
 }
 
-////
 // This section is much the same as the repo `web-service-epoch-axum`.
-////
 
 /// axum handler for "GET /epoch" which shows the current epoch time.
 /// This shows how to write a handler that uses time and can error.
@@ -96,13 +92,11 @@ pub async fn epoch() -> Result<String, axum::http::StatusCode> {
     }
 }
 
-////
 // This section is much the same as the repo `web-service-uptime-axum`.
-////
 
 /// Create the constant INSTANT so the program can track its own uptime.
 pub static INSTANT: std::sync::LazyLock<std::time::Instant> =
-    std::sync::LazyLock::new(|| std::time::Instant::now());
+    std::sync::LazyLock::new(std::time::Instant::now);
 
 /// axum handler for "GET /uptime" which shows the program's uptime duration.
 /// This shows how to write a handler that uses a global static lazy value.
@@ -110,9 +104,7 @@ pub async fn uptime() -> String {
     format!("{}", INSTANT.elapsed().as_secs())
 }
 
-////
 // This section is much the same as the repo `web-service-count-axum`.
-////
 
 /// Create the atomic variable COUNT so the program can track its own count.
 pub static COUNT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
@@ -124,7 +116,7 @@ pub async fn count() -> String {
     format!("{}", COUNT.load(std::sync::atomic::Ordering::SeqCst))
 }
 
-////
+//
 
 /// axum handler for "GET /request-uri" which shows the request's own URI.
 /// This shows how to write a handler that receives the URI.
@@ -151,7 +143,6 @@ async fn demo_png() -> impl axum::response::IntoResponse {
     )
 }
 
-////
 // Demo axum JSON extractor
 //
 // axum has capabilities for working with JSON data.
@@ -164,7 +155,7 @@ async fn demo_png() -> impl axum::response::IntoResponse {
 //
 // The axum extractor for JSON can help with a response, by formatting JSON data
 // then setting the response application content type.
-////
+//
 
 /// axum handler for "GET /demo.json" which returns JSON data.
 /// The `Json` type sets an HTTP header content-type `application/json`.
@@ -182,7 +173,6 @@ pub async fn put_demo_json(
     format!("Put demo JSON data: {:?}", data)
 }
 
-////
 // Demo axum handlers with HTTP verbs GET, PUT, PATCH, POST, DELETE.
 //
 // The axum route has functions for each HTTP verb.
@@ -190,7 +180,7 @@ pub async fn put_demo_json(
 //
 // These demo handlers in this section simply return a string.
 // After this section, you'll see how to return other data.
-////
+//
 
 /// axum handler for "GET /foo" which returns a string message.
 /// This shows our naming convention for HTTP GET handlers.
@@ -222,12 +212,11 @@ pub async fn delete_foo() -> String {
     "DELETE foo".to_string()
 }
 
-////
 // Demo axum handlers with extractors for query params and path params.
 //
 // axum can automatically extract parameters from a request,
 // and then pass them to a handler, using function parameters.
-////
+//
 
 /// axum handler for "GET /items" which uses `axum::extract::Query`.
 /// This extracts query parameters and creates a key-value pair map.
@@ -384,8 +373,8 @@ pub async fn post_books_id_form(form: axum::extract::Form<Book>) -> axum::respon
     let new_book: Book = form.0;
     thread::spawn(move || match DATA.lock() {
         Ok(mut data) => {
-            if data.contains_key(&new_book.id) {
-                data.insert(new_book.id, new_book.clone());
+            if let Some(existing_book) = data.get_mut(&new_book.id) {
+                *existing_book = new_book.clone();
                 format!("Post book: {}", &new_book)
             } else {
                 format!("Book id not found: {}", &new_book.id)
@@ -398,9 +387,7 @@ pub async fn post_books_id_form(form: axum::extract::Form<Book>) -> axum::respon
     .into()
 }
 
-////
 // HTML rendering helpers.
-////
 
 /// Render strings into an HTML table tag.
 pub fn html_table_tag(table: Vec<Vec<String>>) -> String {
@@ -415,7 +402,7 @@ pub fn html_table_tr_tags(rows: Vec<Vec<String>>) -> String {
 }
 
 /// Render strings into HTML table td tags.
-pub fn html_table_td_tags(cells: &Vec<String>) -> String {
+pub fn html_table_td_tags(cells: &[String]) -> String {
     cells
         .iter()
         .map(|cell| format!("<td>{}</td>", cell))

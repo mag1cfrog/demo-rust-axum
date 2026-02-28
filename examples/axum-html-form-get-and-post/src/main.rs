@@ -19,9 +19,7 @@ pub fn app() -> axum::Router {
     axum::Router::new().route("/demo-form", get(get_demo_form).post(post_demo_form))
 }
 
-/////
-/// Demo HTML form GET and POST
-/////
+// Demo HTML form GET and POST
 
 /// See file book.rs, which defines the `Book` struct.
 mod book;

@@ -48,10 +48,10 @@ async fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
     // Use the first arg for tokio::net::TcpListener::bind(…)
-    let bind_address = match args.get(0) {
-        Some(x) => x.clone(),
-        None => "0.0.0.0:3000".into(),
-    };
+    let bind_address = args
+        .first()
+        .cloned()
+        .unwrap_or_else(|| "0.0.0.0:3000".into());
 
     // Create our application which is an axum router.
     let app = crate::app::app();

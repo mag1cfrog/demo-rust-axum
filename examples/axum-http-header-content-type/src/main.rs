@@ -29,7 +29,7 @@ async fn get_demo_css() -> impl axum::response::IntoResponse {
     let mut headers = axum::http::HeaderMap::new();
     headers.insert(
         axum::http::header::CONTENT_TYPE,
-        axum::http::HeaderValue::from_static(&"text/css"),
+        axum::http::HeaderValue::from_static("text/css"),
     );
     (
         headers,
@@ -45,7 +45,7 @@ async fn get_demo_csv() -> impl axum::response::IntoResponse {
     let mut headers = axum::http::HeaderMap::new();
     headers.insert(
         axum::http::header::CONTENT_TYPE,
-        axum::http::HeaderValue::from_static(&"text/csv"),
+        axum::http::HeaderValue::from_static("text/csv"),
     );
     (
         headers,

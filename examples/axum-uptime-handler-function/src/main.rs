@@ -2,7 +2,7 @@ use axum::routing::get;
 
 /// Create the constant INSTANT so the program can track its own uptime.
 pub static INSTANT: std::sync::LazyLock<std::time::Instant> =
-    std::sync::LazyLock::new(|| std::time::Instant::now());
+    std::sync::LazyLock::new(std::time::Instant::now);
 
 /// Run our app using a hyper server on http://localhost:3000.
 #[tokio::main]

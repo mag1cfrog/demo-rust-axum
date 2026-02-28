@@ -60,7 +60,6 @@ pub async fn get_books() -> axum::response::Response {
     })
     .join()
     .unwrap()
-    .into()
 }
 
 /// axum handler for "POST /books" which creates a new book resource.
@@ -79,7 +78,6 @@ pub async fn post_books(
     })
     .join()
     .unwrap()
-    .into()
 }
 
 /// axum handler for "GET /books/{id}" which responds with one resource HTML page.
@@ -96,7 +94,6 @@ pub async fn get_books_id(
     })
     .join()
     .unwrap()
-    .into()
 }
 
 /// axum handler for "PUT /books/{id}" which sets a specific book resource.
@@ -113,7 +110,6 @@ pub async fn put_books_id(
     })
     .join()
     .unwrap()
-    .into()
 }
 
 /// axum handler for "DELETE /books/{id}" which destroys a resource.
@@ -134,7 +130,6 @@ pub async fn delete_books_id(
     })
     .join()
     .unwrap()
-    .into()
 }
 
 /// axum handler for "PATCH /books/{id}" which updates attributes.
@@ -163,7 +158,6 @@ pub async fn patch_books_id(
     })
     .join()
     .unwrap()
-    .into()
 }
 
 #[cfg(test)]
