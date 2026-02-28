@@ -9,10 +9,7 @@ async fn main() {
 
 /// Create our application.
 pub fn app() -> axum::Router {
-    axum::Router::new()
-        .route("/file.html",
-            get(file_html)
-        )
+    axum::Router::new().route("/file.html", get(file_html))
 }
 
 /// axum handler that responds with typical HTML coming from a file.

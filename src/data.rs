@@ -21,7 +21,7 @@ use crate::book::Book;
 // async fn example() {
 //     thread::spawn(move || {
 //         match DATA.lock() {
-            Ok(data) => {
+//             Ok(data) => {
 //         …
 // }).join().unwrap()
 // ```

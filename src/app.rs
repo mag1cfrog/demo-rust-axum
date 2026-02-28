@@ -9,7 +9,7 @@ use std::collections::HashMap;
 /// Use Serde JSON to serialize/deserialize JSON, such as in a request.
 /// axum creates JSON or extracts it by using `axum::extract::Json`.
 /// For this demo, see functions `get_demo_json` and `put_demo_json`.
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// Create our application which is an axum router.
 pub fn app() -> axum::Router {
@@ -92,7 +92,7 @@ pub async fn status() -> (axum::http::StatusCode, String) {
 pub async fn epoch() -> Result<String, axum::http::StatusCode> {
     match std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH) {
         Ok(duration) => Ok(format!("{}", duration.as_secs())),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
 
@@ -101,7 +101,8 @@ pub async fn epoch() -> Result<String, axum::http::StatusCode> {
 ////
 
 /// Create the constant INSTANT so the program can track its own uptime.
-pub static INSTANT: std::sync::LazyLock<std::time::Instant> = std::sync::LazyLock::new(|| std::time::Instant::now());
+pub static INSTANT: std::sync::LazyLock<std::time::Instant> =
+    std::sync::LazyLock::new(|| std::time::Instant::now());
 
 /// axum handler for "GET /uptime" which shows the program's uptime duration.
 /// This shows how to write a handler that uses a global static lazy value.
@@ -130,7 +131,6 @@ pub async fn count() -> String {
 pub async fn request_uri(uri: axum::http::Uri) -> String {
     format!("The URI is: {:?}", uri)
 }
-
 
 /// axum handler for "GET /demo.html" which responds with HTML text.
 /// The `Html` type sets an HTTP header content-type of `text/html`.
@@ -264,28 +264,32 @@ use std::thread;
 /// When you're done, then join the thread with its parent thread.
 #[allow(dead_code)]
 async fn print_data() {
-    thread::spawn(move || {
-        match DATA.lock() {
-            Ok(data) => {
-        println!("data: {:?}", data);
+    thread::spawn(move || match DATA.lock() {
+        Ok(data) => {
+            println!("data: {:?}", data);
+        }
+        Err(err) => {
+            eprintln!("DATA lock error: {err}");
+        }
     })
     .join()
-    .unwrap()
+    .unwrap();
 }
 
 /// axum handler for "GET /books" which responds with a resource page.
 /// This demo uses our DATA; a production app could use a database.
 /// This demo must clone the DATA in order to sort items by title.
 pub async fn get_books() -> axum::response::Html<String> {
-    thread::spawn(move || {
-        match DATA.lock() {
-            Ok(data) => {
-        let mut books = data.values().collect::<Vec<_>>().clone();
-        books.sort_by(|a, b| a.title.cmp(&b.title));
-        books
-            .iter()
-            .map(|&book| format!("<p>{}</p>\n", &book))
-            .collect::<String>()
+    thread::spawn(move || match DATA.lock() {
+        Ok(data) => {
+            let mut books = data.values().collect::<Vec<_>>().clone();
+            books.sort_by(|a, b| a.title.cmp(&b.title));
+            books
+                .iter()
+                .map(|&book| format!("<p>{}</p>\n", &book))
+                .collect::<String>()
+        }
+        Err(err) => format!("<p>DATA lock error: {err}</p>"),
     })
     .join()
     .unwrap()
@@ -297,11 +301,12 @@ pub async fn get_books() -> axum::response::Html<String> {
 pub async fn put_books(
     axum::extract::Json(book): axum::extract::Json<Book>,
 ) -> axum::response::Html<String> {
-    thread::spawn(move || {
-        match DATA.lock() {
-            Ok(mut data) => {
-        data.insert(book.id, book.clone());
-        format!("Put book: {}", &book)
+    thread::spawn(move || match DATA.lock() {
+        Ok(mut data) => {
+            data.insert(book.id, book.clone());
+            format!("Put book: {}", &book)
+        }
+        Err(err) => format!("DATA lock error: {err}"),
     })
     .join()
     .unwrap()
@@ -313,13 +318,12 @@ pub async fn put_books(
 pub async fn get_books_id(
     axum::extract::Path(id): axum::extract::Path<u32>,
 ) -> axum::response::Html<String> {
-    thread::spawn(move || {
-        match DATA.lock() {
-            Ok(data) => {
-        match data.get(&id) {
+    thread::spawn(move || match DATA.lock() {
+        Ok(data) => match data.get(&id) {
             Some(book) => format!("<p>{}</p>\n", &book),
             None => format!("<p>Book id {} not found</p>", id),
-        }
+        },
+        Err(err) => format!("<p>DATA lock error: {err}</p>"),
     })
     .join()
     .unwrap()
@@ -331,15 +335,16 @@ pub async fn get_books_id(
 pub async fn delete_books_id(
     axum::extract::Path(id): axum::extract::Path<u32>,
 ) -> axum::response::Html<String> {
-    thread::spawn(move || {
-        match DATA.lock() {
-            Ok(mut data) => {
-        if data.contains_key(&id) {
-            data.remove(&id);
-            format!("Delete book id: {}", &id)
-        } else {
-            format!("Book id not found: {}", &id)
+    thread::spawn(move || match DATA.lock() {
+        Ok(mut data) => {
+            if data.contains_key(&id) {
+                data.remove(&id);
+                format!("Delete book id: {}", &id)
+            } else {
+                format!("Book id not found: {}", &id)
+            }
         }
+        Err(err) => format!("DATA lock error: {err}"),
     })
     .join()
     .unwrap()
@@ -351,10 +356,8 @@ pub async fn delete_books_id(
 pub async fn get_books_id_form(
     axum::extract::Path(id): axum::extract::Path<u32>,
 ) -> axum::response::Html<String> {
-    thread::spawn(move || {
-        match DATA.lock() {
-            Ok(data) => {
-        match data.get(&id) {
+    thread::spawn(move || match DATA.lock() {
+        Ok(data) => match data.get(&id) {
             Some(book) => format!(
                 concat!(
                     "<form method=\"post\" action=\"/books/{}/form\">\n",
@@ -367,7 +370,8 @@ pub async fn get_books_id_form(
                 &book.id, &book.id, &book.title, &book.author
             ),
             None => format!("<p>Book id {} not found</p>", id),
-        }
+        },
+        Err(err) => format!("<p>DATA lock error: {err}</p>"),
     })
     .join()
     .unwrap()
@@ -378,15 +382,16 @@ pub async fn get_books_id_form(
 /// This demo shows how to do a form submission then update a resource.
 pub async fn post_books_id_form(form: axum::extract::Form<Book>) -> axum::response::Html<String> {
     let new_book: Book = form.0;
-    thread::spawn(move || {
-        match DATA.lock() {
-            Ok(mut data) => {
-        if data.contains_key(&new_book.id) {
-            data.insert(new_book.id, new_book.clone());
-            format!("Post book: {}", &new_book)
-        } else {
-            format!("Book id not found: {}", &new_book.id)
+    thread::spawn(move || match DATA.lock() {
+        Ok(mut data) => {
+            if data.contains_key(&new_book.id) {
+                data.insert(new_book.id, new_book.clone());
+                format!("Post book: {}", &new_book)
+            } else {
+                format!("Book id not found: {}", &new_book.id)
+            }
         }
+        Err(err) => format!("DATA lock error: {err}"),
     })
     .join()
     .unwrap()
@@ -405,17 +410,16 @@ pub fn html_table_tag(table: Vec<Vec<String>>) -> String {
 /// Render strings into HTML table tr tags.
 pub fn html_table_tr_tags(rows: Vec<Vec<String>>) -> String {
     rows.iter()
-        .map(|row| 
-            format!("<tr>{}</tr>\n", html_table_td_tags(row))
-        )
+        .map(|row| format!("<tr>{}</tr>\n", html_table_td_tags(row)))
         .collect::<String>()
 }
 
 /// Render strings into HTML table td tags.
 pub fn html_table_td_tags(cells: &Vec<String>) -> String {
-    cells.iter().map(|cell| 
-        format!("<td>{}</td>", cell)
-    ).collect::<String>()
+    cells
+        .iter()
+        .map(|cell| format!("<td>{}</td>", cell))
+        .collect::<String>()
 }
 
 #[cfg(test)]
@@ -429,15 +433,25 @@ mod tests {
         let response_text_0 = server.get("/uptime").await.text();
         std::thread::sleep(std::time::Duration::from_secs(1));
         let response_text_1 = server.get("/uptime").await.text();
-        assert!(response_text_0 < response_text_1, "{} < {}", response_text_0, response_text_1);
+        assert!(
+            response_text_0 < response_text_1,
+            "{} < {}",
+            response_text_0,
+            response_text_1
+        );
     }
 
     #[tokio::test]
     async fn count() {
         let server = TestServer::new(app()).unwrap();
-            let response_text_0 = server.get("/count").await.text();
+        let response_text_0 = server.get("/count").await.text();
         let response_text_1 = server.get("/count").await.text();
-        assert!(response_text_0 < response_text_1, "{} < {}", response_text_0, response_text_1);
+        assert!(
+            response_text_0 < response_text_1,
+            "{} < {}",
+            response_text_0,
+            response_text_1
+        );
     }
 
     #[tokio::test]
@@ -446,8 +460,11 @@ mod tests {
         let response_text_0 = server.get("/epoch").await.text();
         std::thread::sleep(std::time::Duration::from_secs(1));
         let response_text_1 = server.get("/epoch").await.text();
-        assert!(response_text_0 < response_text_1, "{} < {}", response_text_0, response_text_1)
+        assert!(
+            response_text_0 < response_text_1,
+            "{} < {}",
+            response_text_0,
+            response_text_1
+        )
     }
-
-
 }

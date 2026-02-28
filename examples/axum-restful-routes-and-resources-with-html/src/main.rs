@@ -21,19 +21,17 @@ async fn main() {
 /// Create our application.
 pub fn app() -> axum::Router {
     axum::Router::new()
-        .route("/books",
-            get(get_books)
-            .post(post_books)
-        )
-        .route("/books/{id}",
+        .route("/books", get(get_books).post(post_books))
+        .route(
+            "/books/{id}",
             get(get_books_id)
-            .put(put_books_id)
-            .patch(patch_books_id)
-            .delete(delete_books_id)
+                .put(put_books_id)
+                .patch(patch_books_id)
+                .delete(delete_books_id),
         )
-        .route("/books/{id}/edit",
-            get(get_books_id_with_edit_form)
-            .patch(patch_books_id_with_edit_form)
+        .route(
+            "/books/{id}/edit",
+            get(get_books_id_with_edit_form).patch(patch_books_id_with_edit_form),
         )
 }
 
@@ -57,118 +55,143 @@ use std::thread;
 #[allow(dead_code)]
 async fn print_data() {
     thread::spawn(move || {
-        println!("data: {:?}" , DATA.lock());
-    }).join().unwrap()
+        println!("data: {:?}", DATA.lock());
+    })
+    .join()
+    .unwrap()
 }
 
 /// axum handler for "GET /books" which responds with a resource page.
 /// This demo uses our DATA; a production app could use a database.
 /// This demo must clone the DATA in order to sort items by title.
 pub async fn get_books() -> axum::response::Html<String> {
-    thread::spawn(move || {
-        match DATA.lock() {
-            Ok(data) => {
-        let mut books = data.values().collect::<Vec<_>>().clone();
-        books.sort_by(|a, b| a.title.cmp(&b.title));
-        books.iter().map(|&book|
-            format!("<p>{}</p>\n", &book)
-        ).collect::<String>()
-    }).join().unwrap().into()
+    thread::spawn(move || match DATA.lock() {
+        Ok(data) => {
+            let mut books = data.values().collect::<Vec<_>>().clone();
+            books.sort_by(|a, b| a.title.cmp(&b.title));
+            books
+                .iter()
+                .map(|&book| format!("<p>{}</p>\n", &book))
+                .collect::<String>()
+        }
+        Err(err) => format!("<p>DATA lock error: {err}</p>"),
+    })
+    .join()
+    .unwrap()
+    .into()
 }
 
 /// axum handler for "POST /books" which creates a new book resource.
 /// This demo shows how axum can extract HTML data into a Book struct.
-/// 
+///
 pub async fn post_books(
-    axum::extract::Form(book_change): axum::extract::Form<Book>
+    axum::extract::Form(book_change): axum::extract::Form<Book>,
 ) -> axum::response::Html<String> {
-    thread::spawn(move || {
-        match DATA.lock() {
-            Ok(mut data) => {
-        let id = data.keys().max().unwrap() + 1;
-        let book = Book { id, ..book_change };
-        data.insert(id, book.clone());
-        format!("Post a new book with new id {}: {}", &id, &book)
-    }).join().unwrap().into()
+    thread::spawn(move || match DATA.lock() {
+        Ok(mut data) => {
+            let id = data.keys().copied().max().unwrap_or(0) + 1;
+            let book = Book { id, ..book_change };
+            data.insert(id, book.clone());
+            format!("Post a new book with new id {}: {}", &id, &book)
+        }
+        Err(err) => format!("DATA lock error: {err}"),
+    })
+    .join()
+    .unwrap()
+    .into()
 }
 
 /// axum handler for "GET /books/{id}" which responds with one resource HTML page.
 /// This demo app uses our crate::DATA variable, and iterates on it to find the id.
 pub async fn get_books_id(
-    axum::extract::Path(id): axum::extract::Path<u32>
+    axum::extract::Path(id): axum::extract::Path<u32>,
 ) -> axum::response::Html<String> {
-    thread::spawn(move || {
-        match DATA.lock() {
-            Ok(data) => {
-        match data.get(&id) {
+    thread::spawn(move || match DATA.lock() {
+        Ok(data) => match data.get(&id) {
             Some(book) => format!("<p>{}</p>\n", &book),
             None => format!("<p>Book id {} not found</p>", id),
-        }
-    }).join().unwrap().into()
+        },
+        Err(err) => format!("<p>DATA lock error: {err}</p>"),
+    })
+    .join()
+    .unwrap()
+    .into()
 }
 
 /// axum handler for "PUT /books/{id}" which sets a specific book resource.
 /// This demo shows how axum can extract JSON data into a Book struct.
 pub async fn put_books_id(
-    axum::extract::Form(book): axum::extract::Form<Book>
+    axum::extract::Form(book): axum::extract::Form<Book>,
 ) -> axum::response::Html<String> {
-    thread::spawn(move || {
-        match DATA.lock() {
-            Ok(mut data) => {
-        data.insert(book.id, book.clone());
-        format!("Put book: {}", &book)
-    }).join().unwrap().into()
+    thread::spawn(move || match DATA.lock() {
+        Ok(mut data) => {
+            data.insert(book.id, book.clone());
+            format!("Put book: {}", &book)
+        }
+        Err(err) => format!("DATA lock error: {err}"),
+    })
+    .join()
+    .unwrap()
+    .into()
 }
 
 /// axum handler for "DELETE /books/{id}" which destroys a resource.
 /// This demo extracts an id, then deletes the book in the DATA store.
 pub async fn delete_books_id(
-    axum::extract::Path(id): axum::extract::Path<u32>
+    axum::extract::Path(id): axum::extract::Path<u32>,
 ) -> axum::response::Html<String> {
-    thread::spawn(move || {
-        match DATA.lock() {
-            Ok(mut data) => {
-        if data.contains_key(&id) {
-            data.remove(&id);
-            format!("Delete book id: {}", &id)
-        } else {
-            format!("Book id not found: {}", &id)
+    thread::spawn(move || match DATA.lock() {
+        Ok(mut data) => {
+            if data.contains_key(&id) {
+                data.remove(&id);
+                format!("Delete book id: {}", &id)
+            } else {
+                format!("Book id not found: {}", &id)
+            }
         }
-    }).join().unwrap().into()
+        Err(err) => format!("DATA lock error: {err}"),
+    })
+    .join()
+    .unwrap()
+    .into()
 }
 
 /// axum handler for "PATCH /books/{id}" which updates attributes.
 /// This demo shows how to mutate the book attributes in the DATA store.
 pub async fn patch_books_id(
-    axum::extract::Form(book_change): axum::extract::Form<BookChange>
+    axum::extract::Form(book_change): axum::extract::Form<BookChange>,
 ) -> axum::response::Html<String> {
     thread::spawn(move || {
         let id = book_change.id;
         match DATA.lock() {
             Ok(mut data) => {
-        if let Some(resource) = data.get_mut(&id) {
-            if let Some(title) = book_change.title {
-                resource.title = title;
+                if let Some(resource) = data.get_mut(&id) {
+                    if let Some(title) = book_change.title {
+                        resource.title = title;
+                    }
+                    if let Some(author) = book_change.author {
+                        resource.author = author;
+                    }
+                    format!("Patch book id: {}", &id)
+                } else {
+                    format!("Book id not found: {}", &id)
+                }
             }
-            if let Some(author) = book_change.author {
-                resource.author = author;
-            }
-            format!("Patch book id: {}", &id)
-        } else {
-            format!("Book id not found: {}", &id)
+            Err(err) => format!("DATA lock error: {err}"),
         }
-    }).join().unwrap().into()
+    })
+    .join()
+    .unwrap()
+    .into()
 }
 
 /// axum handler for "GET /books/{id}/edit" which responds with a form.
 /// This demo shows how to write a typical HTML form with input fields.
 pub async fn get_books_id_with_edit_form(
-    axum::extract::Path(id): axum::extract::Path<u32>
+    axum::extract::Path(id): axum::extract::Path<u32>,
 ) -> axum::response::Html<String> {
-    thread::spawn(move || {
-        match DATA.lock() {
-            Ok(data) => {
-        match data.get(&id) {
+    thread::spawn(move || match DATA.lock() {
+        Ok(data) => match data.get(&id) {
             Some(book) => format!(
                 concat!(
                     "<form method=\"patch\" action=\"/books/{}/edit\">\n",
@@ -178,38 +201,45 @@ pub async fn get_books_id_with_edit_form(
                     "<input type=\"submit\" value=\"Save\">\n",
                     "</form>\n"
                 ),
-                &book.id,
-                &book.id,
-                &book.title,
-                &book.author
+                &book.id, &book.id, &book.title, &book.author
             ),
             None => format!("<p>Book id {} not found</p>", id),
-        }
-    }).join().unwrap().into()
+        },
+        Err(err) => format!("<p>DATA lock error: {err}</p>"),
+    })
+    .join()
+    .unwrap()
+    .into()
 }
 
 /// axum handler for "PATCH /books/{id}/edit" which updates attributes.
 /// This demo shows how to do HTML form submission then update attributes.
 pub async fn patch_books_id_with_edit_form(
-    form: axum::extract::Form<BookChange>
+    form: axum::extract::Form<BookChange>,
 ) -> axum::response::Html<String> {
     let book_change: BookChange = form.0;
     thread::spawn(move || {
         let id = book_change.id;
         match DATA.lock() {
             Ok(mut data) => {
-        if data.contains_key(&id) {
-            if let Some(title) = book_change.title {
-                data.get_mut(&id).unwrap().title = title.clone();
+                if data.contains_key(&id) {
+                    if let Some(title) = book_change.title {
+                        data.get_mut(&id).unwrap().title = title;
+                    }
+                    if let Some(author) = book_change.author {
+                        data.get_mut(&id).unwrap().author = author;
+                    }
+                    format!("Patch book id: {}", &id)
+                } else {
+                    format!("Book id not found: {}", &book_change.id)
+                }
             }
-            if let Some(author) = book_change.author {
-                data.get_mut(&id).unwrap().title = author.clone();
-            }
-            format!("Patch book id: {}", &id)
-        } else {
-            format!("Book id not found: {}", &book_change.id)
+            Err(err) => format!("DATA lock error: {err}"),
         }
-    }).join().unwrap().into()
+    })
+    .join()
+    .unwrap()
+    .into()
 }
 
 #[cfg(test)]
@@ -273,5 +303,4 @@ mod tests {
     //     //TODO
     //     //server.get("/books/1/edit").await.assert_text("<p>Antigone by Sophocles</p><p>Beloved by Toni Morrison</p><p>Candide by Voltaire</p>");
     // }
-
 }

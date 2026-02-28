@@ -9,10 +9,7 @@ async fn main() {
 
 /// Create our application.
 pub fn app() -> axum::Router {
-    axum::Router::new()
-        .route("/demo.json",
-            get(get_demo_json)
-        )
+    axum::Router::new().route("/demo.json", get(get_demo_json))
 }
 
 /// axum handler for "GET /demo.json" which returns JSON data.
@@ -31,6 +28,9 @@ mod tests {
     #[tokio::test]
     async fn test() {
         let server = TestServer::new(app()).unwrap();
-        server.get("/demo.json").await.assert_json(&json!({"a":"b"}));
+        server
+            .get("/demo.json")
+            .await
+            .assert_json(&json!({"a":"b"}));
     }
 }
